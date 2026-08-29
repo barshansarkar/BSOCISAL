@@ -7,3 +7,4 @@ Werkzeug==3.0.0
 Pillow==10.1.0
 python-dotenv==1.0.0
 email-validator==2.1.0
+gunicorn==26.2.0
