@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header-clean">
+    <h2>📋 Report Management</h2>
+    <p class="text-[var(--text-secondary)] text-sm">Review and manage reported content</p>
+</div>
+
+{% if reports %}
+    <div class="divide-y divide-[var(--border)]">
+        {% for report in reports %}
+        <div class="post-clean">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center space-x-2 mb-1">
+                        <span class="text-sm font-bold">{{ report.reporter.username }}</span>
+                        <span class="text-[var(--text-secondary)] text-sm">reported</span>
+                        {% if report.post %}
+                            <span class="text-[var(--text-secondary)] text-sm">a post</span>
+                        {% elif report.comment %}
+                            <span class="text-[var(--text-secondary)] text-sm">a comment</span>
+                        {% elif report.user %}
+                            <span class="text-[var(--text-secondary)] text-sm">a user</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="text-sm text-[var(--text-secondary)] mb-2">
+                        <span class="font-medium">Reason:</span> 
+                        <span class="capitalize">{{ report.reason.replace('_', ' ') }}</span>
+                    </div>
+                    
+                    {% if report.details %}
+                        <div class="text-sm text-[var(--text-secondary)] mb-2">
+                            <span class="font-medium">Details:</span> {{ report.details }}
+                        </div>
+                    {% endif %}
+                    
+                    {% if report.post %}
+                        <div class="bg-[var(--bg-secondary)] rounded-lg p-3 mb-2">
+                            <div class="text-sm">
+                                <span class="font-medium">Post by:</span> 
+                                <a href="{{ url_for('profile', username=report.post.author.username) }}" class="hover:underline">
+                                    @{{ report.post.author.username }}
+                                </a>
+                            </div>
+                            <p class="text-sm mt-1">{{ report.post.content[:200] }}{% if report.post.content|length > 200 %}...{% endif %}</p>
+                            <a href="{{ url_for('view_post', post_id=report.post.id) }}" class="text-[var(--blue)] text-sm hover:underline">View Post →</a>
+                        </div>
+                    {% elif report.comment %}
+                        <div class="bg-[var(--bg-secondary)] rounded-lg p-3 mb-2">
+                            <div class="text-sm">
+                                <span class="font-medium">Comment by:</span> 
+                                <a href="{{ url_for('profile', username=report.comment.user.username) }}" class="hover:underline">
+                                    @{{ report.comment.user.username }}
+                                </a>
+                            </div>
+                            <p class="text-sm mt-1">{{ report.comment.content }}</p>
+                        </div>
+                    {% elif report.user %}
+                        <div class="bg-[var(--bg-secondary)] rounded-lg p-3 mb-2">
+                            <div class="text-sm">
+                                <span class="font-medium">Reported user:</span> 
+                                <a href="{{ url_for('profile', username=report.reported_user.username) }}" class="hover:underline">
+                                    @{{ report.reported_user.username }}
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="flex items-center space-x-4 text-sm text-[var(--text-secondary)]">
+                        <span><i class="far fa-clock"></i> {{ report.created_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                            {% if report.status == 'pending' %}bg-yellow-100 text-yellow-800
+                            {% elif report.status == 'reviewed' %}bg-green-100 text-green-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ report.status }}
+                        </span>
+                    </div>
+                </div>
+                
+                {% if report.status == 'pending' %}
+                <form method="POST" action="{{ url_for('review_report', report_id=report.id) }}" class="space-y-1">
+                    <button type="submit" name="action" value="delete_post" 
+                            class="btn-blue text-xs px-3 py-1 w-full bg-red-500 hover:bg-red-600">
+                        Delete Post
+                    </button>
+                    <button type="submit" name="action" value="delete_comment" 
+                            class="btn-blue text-xs px-3 py-1 w-full bg-red-500 hover:bg-red-600">
+                        Delete Comment
+                    </button>
+                    <button type="submit" name="action" value="warning_user" 
+                            class="btn-blue text-xs px-3 py-1 w-full bg-yellow-500 hover:bg-yellow-600">
+                        Send Warning
+                    </button>
+                    <button type="submit" name="action" value="dismiss" 
+                            class="btn-outline text-xs px-3 py-1 w-full">
+                        Dismiss
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="p-12 text-center border-b border-[var(--border)]">
+        <i class="fas fa-check-circle text-5xl text-[var(--green)] mb-4"></i>
+        <h3 class="text-2xl font-bold mb-2">All clear!</h3>
+        <p class="text-[var(--text-secondary)]">No pending reports to review.</p>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header-clean">
+    <div class="flex items-center space-x-4">
+        <a href="{{ url_for('profile', username=user.username) }}" class="text-[var(--text-secondary)] hover:text-[var(--text)]">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2>Followers</h2>
+    </div>
+    <p class="text-[var(--text-secondary)] text-sm">@{{ user.username }}</p>
+</div>
+
+{% if followers %}
+    <div class="divide-y divide-[var(--border)]">
+        {% for follow in followers %}
+            {% set follower = follow.follower_user %}
+            <div class="post-clean">
+                <div class="flex items-center justify-between">
+                    <a href="{{ url_for('profile', username=follower.username) }}" class="flex items-center space-x-3 flex-1">
+                        <img src="{{ url_for('static', filename='profile_pics/' + follower.avatar) if follower.avatar else 'https://via.placeholder.com/48' }}" 
+                             class="avatar-clean-lg" alt="{{ follower.username }}">
+                        <div>
+                            <div class="font-bold hover:underline">{{ follower.username }}</div>
+                            <div class="text-[var(--text-secondary)] text-sm">@{{ follower.username }}</div>
+                            {% if follower.bio %}
+                                <div class="text-[var(--text-secondary)] text-sm truncate max-w-xs">{{ follower.bio }}</div>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% if current_user.is_authenticated and current_user.id != follower.id %}
+                        <button class="follow-btn btn-blue text-xs px-4 py-1 transition-all duration-200 
+                                       {% if current_user.is_following(follower) %}bg-[var(--bg-secondary)] text-[var(--text)] border border-[var(--border)] hover:bg-red-50 hover:text-red-600{% endif %}"
+                                data-user-id="{{ follower.id }}"
+                                data-following="{{ 'true' if current_user.is_following(follower) else 'false' }}">
+                            {{ 'Unfollow' if current_user.is_following(follower) else 'Follow' }}
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="p-12 text-center border-b border-[var(--border)]">
+        <i class="fas fa-users text-5xl text-[var(--text-secondary)] mb-4"></i>
+        <h3 class="text-2xl font-bold mb-2">No followers yet</h3>
+        <p class="text-[var(--text-secondary)]">When people follow you, they'll show up here.</p>
+    </div>
+{% endif %}
+
+<script>
+// Follow/Unfollow AJAX for followers list
+document.querySelectorAll('.follow-btn').forEach(btn => {
+    btn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        const userId = this.dataset.userId;
+        const isFollowing = this.dataset.following === 'true';
+
+        try {
+            const res = await fetch(`/follow/${userId}`, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await res.json();
+            if (data.following !== undefined) {
+                this.dataset.following = data.following ? 'true' : 'false';
+                this.textContent = data.following ? 'Unfollow' : 'Follow';
+                this.classList.toggle('bg-[var(--bg-secondary)]', data.following);
+                this.classList.toggle('text-[var(--text)]', data.following);
+                this.classList.toggle('border', data.following);
+                this.classList.toggle('border-[var(--border)]', data.following);
+                this.classList.toggle('hover:bg-red-50', data.following);
+                this.classList.toggle('hover:text-red-600', data.following);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to follow/unfollow. Please try again.');
+        }
+    });
+});
+</script>
+{% endblock %}

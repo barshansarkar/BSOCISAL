@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header-clean">
+    <h2>Notifications</h2>
+</div>
+
+{% if notifications %}
+    <div class="divide-y divide-[var(--border)]">
+        {% for notification in notifications %}
+        <div class="post-clean hover:bg-[var(--bg-secondary)] transition-colors {% if not notification.read %}bg-[var(--bg-secondary)]/50{% endif %}">
+            <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0 mt-1">
+                    {% if notification.type == 'follow' %}
+                        <i class="fas fa-user-plus text-[var(--blue)] text-xl"></i>
+                    {% elif notification.type == 'like' %}
+                        <i class="fas fa-heart text-[var(--pink)] text-xl"></i>
+                    {% elif notification.type == 'comment' %}
+                        <i class="fas fa-comment text-[var(--green)] text-xl"></i>
+                    {% else %}
+                        <i class="fas fa-bell text-[var(--text-secondary)] text-xl"></i>
+                    {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <a href="{{ url_for('profile', username=notification.actor.username) }}" class="font-bold hover:underline">
+                                {{ notification.actor.username }}
+                            </a>
+                            <span class="text-[var(--text-secondary)]">{{ notification.message }}</span>
+                        </div>
+                        <span class="text-[var(--text-secondary)] text-xs whitespace-nowrap ml-2">
+                            {{ notification.created_at.strftime('%b %d, %I:%M %p') }}
+                        </span>
+                    </div>
+                    {% if notification.post %}
+                    <a href="{{ url_for('view_post', post_id=notification.post.id) }}" class="text-[var(--text-secondary)] text-sm hover:text-[var(--blue)] mt-1 block">
+                        View post →
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="p-12 text-center border-b border-[var(--border)]">
+        <i class="fas fa-bell-slash text-5xl text-[var(--text-secondary)] mb-4"></i>
+        <h3 class="text-2xl font-bold mb-2">No notifications</h3>
+        <p class="text-[var(--text-secondary)]">You're all caught up!</p>
+    </div>
+{% endif %}
+{% endblock %}

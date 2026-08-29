@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Profile Header -->
+    <div class="post-card p-6 mb-6">
+        <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+            <!-- Avatar -->
+            <div class="relative">
+                <img src="{{ url_for('static', filename='profile_pics/' + user.avatar) if user.avatar else 'https://via.placeholder.com/150' }}" 
+                     alt="{{ user.username }}" class="w-32 h-32 rounded-full object-cover border-4 border-blue-500">
+                {% if user.is_verified %}
+                <i class="fas fa-check-circle text-blue-500 absolute bottom-0 right-0 text-2xl"></i>
+                {% endif %}
+            </div>
+            
+            <!-- Info -->
+            <div class="flex-1 text-center md:text-left">
+                <div class="flex flex-col md:flex-row md:items-center gap-4 mb-2">
+                    <h1 class="text-2xl font-bold">{{ user.username }}</h1>
+                    <span class="text-secondary">@{{ user.username }}</span>
+                    {% if current_user.id == user.id %}
+                        <a href="{{ url_for('edit_profile') }}" class="gradient-btn px-4 py-1 text-sm">
+                            Edit Profile
+                        </a>
+                    {% else %}
+                        <!-- Follow button for other users -->
+                        {% if current_user.is_authenticated %}
+                            <button id="profileFollowBtn" 
+                                    class="btn-blue px-4 py-1 text-sm transition-all duration-200 
+                                           {% if current_user.is_following(user) %}bg-[var(--bg-secondary)] text-[var(--text)] border border-[var(--border)] hover:bg-red-50 hover:text-red-600{% endif %}"
+                                    data-user-id="{{ user.id }}"
+                                    data-following="{{ 'true' if current_user.is_following(user) else 'false' }}">
+                                {{ 'Unfollow' if current_user.is_following(user) else 'Follow' }}
+                            </button>
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="btn-blue px-4 py-1 text-sm">Follow</a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                
+                <div class="flex justify-center md:justify-start space-x-6 text-sm mb-3">
+                    <span><strong>{{ user.posts|length }}</strong> Posts</span>
+                    <a href="{{ url_for('followers', username=user.username) }}" class="hover:underline cursor-pointer">
+                        <span><strong id="followerCount">{{ user.follower_count() }}</strong> Followers</span>
+                    </a>
+                    <a href="{{ url_for('following', username=user.username) }}" class="hover:underline cursor-pointer">
+                        <span><strong>{{ user.follow_count() }}</strong> Following</span>
+                    </a>
+                </div>
+                
+                {% if user.bio %}
+                <p class="text-primary">{{ user.bio }}</p>
+                {% endif %}
+                
+                <p class="text-secondary text-sm mt-2">
+                    <i class="far fa-calendar-alt mr-1"></i> Joined {{ user.created_at.strftime('%B %Y') }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Posts Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for post in posts %}
+        <div class="post-card overflow-hidden group relative">
+            <a href="{{ url_for('view_post', post_id=post.id) }}" class="block relative">
+                {% if post.images %}
+                    <img src="{{ url_for('static', filename='uploads/' + post.images[0].filename) }}" 
+                         alt="Post" class="w-full h-64 object-cover group-hover:scale-105 transition duration-300">
+                {% else %}
+                    <div class="w-full h-64 bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center p-4">
+                        <p class="text-white text-center line-clamp-4">{{ post.content }}</p>
+                    </div>
+                {% endif %}
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div class="flex items-center space-x-6 text-white">
+                        <div><i class="fas fa-heart"></i> {{ post.like_count() }}</div>
+                        <div><i class="fas fa-comment"></i> {{ post.comment_count() }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not posts %}
+    <div class="text-center py-12">
+        <i class="fas fa-camera text-6xl text-secondary mb-4"></i>
+        <h3 class="text-xl font-semibold text-primary">No posts yet</h3>
+        {% if current_user.id == user.id %}
+        <p class="text-secondary">Share your first post with the world!</p>
+        <a href="{{ url_for('create_post') }}" class="gradient-btn inline-block mt-4">
+            Create Post
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const followBtn = document.getElementById('profileFollowBtn');
+    if (followBtn) {
+        followBtn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const userId = this.dataset.userId;
+            const isFollowing = this.dataset.following === 'true';
+
+            try {
+                const res = await fetch(`/follow/${userId}`, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await res.json();
+                if (data.following !== undefined) {
+                    // Update button
+                    this.dataset.following = data.following ? 'true' : 'false';
+                    this.textContent = data.following ? 'Unfollow' : 'Follow';
+                    this.classList.toggle('bg-[var(--bg-secondary)]', data.following);
+                    this.classList.toggle('text-[var(--text)]', data.following);
+                    this.classList.toggle('border', data.following);
+                    this.classList.toggle('border-[var(--border)]', data.following);
+                    this.classList.toggle('hover:bg-red-50', data.following);
+                    this.classList.toggle('hover:text-red-600', data.following);
+                    // Update follower count
+                    const countSpan = document.getElementById('followerCount');
+                    if (countSpan) countSpan.textContent = data.follower_count;
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to follow/unfollow. Please try again.');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

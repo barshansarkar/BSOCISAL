@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+
+{% block content %}
+<div class="header-clean">
+    <h2>Edit Post</h2>
+</div>
+
+<div class="p-4">
+    <form method="POST" class="space-y-4">
+        {{ form.hidden_tag() }}
+        
+        <div class="flex space-x-3">
+            {{ macros.user_avatar(current_user, 48, 'avatar-clean-lg') }}
+            <div class="flex-1">
+                <div class="font-bold">{{ current_user.username }}</div>
+                {{ form.content(class="w-full bg-transparent border-none resize-none focus:outline-none text-lg", rows=6) }}
+                <div class="text-right text-[var(--text-secondary)] text-sm mt-1">
+                    <span id="charCount">{{ post.content|length }}</span>/1000
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-[var(--border)]">
+            <div class="flex space-x-2">
+                <span class="action-clean text-[var(--text-secondary)]">
+                    <i class="fas fa-image"></i>
+                </span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('view_post', post_id=post.id) }}" class="text-[var(--text-secondary)] hover:text-[var(--text)]">Cancel</a>
+                {{ form.submit(class="btn-blue", value="Update") }}
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+const textarea = document.querySelector('textarea');
+if (textarea) {
+    textarea.addEventListener('input', function() {
+        document.getElementById('charCount').textContent = this.value.length;
+    });
+}
+</script>
+{% endblock %}

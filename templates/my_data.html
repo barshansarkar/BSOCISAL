@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header-clean">
+    <h2>📊 Data</h2>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-3 md:grid-cols-5 gap-3 p-4 border-b border-[var(--border)]">
+    <div class="text-center">
+        <div class="text-2xl font-bold text-[var(--blue)]">{{ stats.users }}</div>
+        <div class="text-[var(--text-secondary)] text-sm">Users</div>
+    </div>
+    <div class="text-center">
+        <div class="text-2xl font-bold text-[var(--green)]">{{ stats.posts }}</div>
+        <div class="text-[var(--text-secondary)] text-sm">Posts</div>
+    </div>
+    <div class="text-center">
+        <div class="text-2xl font-bold text-purple-500">{{ stats.images }}</div>
+        <div class="text-[var(--text-secondary)] text-sm">Images</div>
+    </div>
+    <div class="text-center">
+        <div class="text-2xl font-bold text-[var(--pink)]">{{ stats.likes }}</div>
+        <div class="text-[var(--text-secondary)] text-sm">Likes</div>
+    </div>
+    <div class="text-center">
+        <div class="text-2xl font-bold text-yellow-500">{{ stats.comments }}</div>
+        <div class="text-[var(--text-secondary)] text-sm">Comments</div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="flex border-b border-[var(--border)] px-4 space-x-4">
+    <button onclick="showTab('users')" class="tab-btn py-3 font-bold text-sm border-b-2 border-[var(--blue)] text-[var(--blue)]" data-tab="users">Users</button>
+    <button onclick="showTab('posts')" class="tab-btn py-3 font-bold text-sm text-[var(--text-secondary)] hover:text-[var(--text)]" data-tab="posts">Posts</button>
+    <button onclick="showTab('images')" class="tab-btn py-3 font-bold text-sm text-[var(--text-secondary)] hover:text-[var(--text)]" data-tab="images">Images</button>
+    <button onclick="showTab('likes')" class="tab-btn py-3 font-bold text-sm text-[var(--text-secondary)] hover:text-[var(--text)]" data-tab="likes">Likes</button>
+    <button onclick="showTab('comments')" class="tab-btn py-3 font-bold text-sm text-[var(--text-secondary)] hover:text-[var(--text)]" data-tab="comments">Comments</button>
+</div>
+
+<!-- Users -->
+<div id="tab-users" class="tab-content overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-[var(--bg-secondary)] sticky top-0">
+            <tr>
+                <th class="px-4 py-3 text-left">User</th>
+                <th class="px-4 py-3 text-left">Email</th>
+                <th class="px-4 py-3 text-left">Joined</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr class="border-b border-[var(--border)]">
+                <td class="px-4 py-3 font-semibold">
+                    <div class="flex items-center space-x-2">
+                        <img src="{{ url_for('static', filename='profile_pics/' + user.avatar) if user.avatar else 'https://via.placeholder.com/30' }}" 
+                             class="avatar-clean w-6 h-6">
+                        <span>{{ user.username }}</span>
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-[var(--text-secondary)]">{{ user.email }}</td>
+                <td class="px-4 py-3 text-[var(--text-secondary)]">{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Posts -->
+<div id="tab-posts" class="tab-content hidden overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-[var(--bg-secondary)] sticky top-0">
+            <tr>
+                <th class="px-4 py-3 text-left">Author</th>
+                <th class="px-4 py-3 text-left">Content</th>
+                <th class="px-4 py-3 text-center">❤️</th>
+                <th class="px-4 py-3 text-left">Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+            <tr class="border-b border-[var(--border)]">
+                <td class="px-4 py-3 font-semibold">{{ post.author.username }}</td>
+                <td class="px-4 py-3 max-w-xs truncate">{{ post.content }}</td>
+                <td class="px-4 py-3 text-center">{{ post.like_count() }}</td>
+                <td class="px-4 py-3 text-[var(--text-secondary)]">{{ post.created_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Images -->
+<div id="tab-images" class="tab-content hidden">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4">
+        {% for image in images %}
+        <div class="relative">
+            <img src="{{ url_for('static', filename='uploads/' + image.filename) }}" 
+                 alt="Image" 
+                 class="w-full h-40 object-cover rounded-lg border border-[var(--border)]">
+            <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 rounded-b-lg text-center">
+                Post #{{ image.post_id }}
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full text-center py-12 text-[var(--text-secondary)]">
+            <i class="fas fa-image text-4xl mb-2"></i>
+            <p>No images</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Likes -->
+<div id="tab-likes" class="tab-content hidden overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-[var(--bg-secondary)] sticky top-0">
+            <tr>
+                <th class="px-4 py-3 text-left">User</th>
+                <th class="px-4 py-3 text-left">Post</th>
+                <th class="px-4 py-3 text-left">Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for like in likes %}
+            <tr class="border-b border-[var(--border)]">
+                <td class="px-4 py-3 font-semibold">{{ like.user.username }}</td>
+                <td class="px-4 py-3 text-[var(--text-secondary)] truncate max-w-xs">{{ like.post.content[:50] }}...</td>
+                <td class="px-4 py-3 text-[var(--text-secondary)]">{{ like.created_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-center py-8 text-[var(--text-secondary)]">No likes</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Comments -->
+<div id="tab-comments" class="tab-content hidden overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-[var(--bg-secondary)] sticky top-0">
+            <tr>
+                <th class="px-4 py-3 text-left">User</th>
+                <th class="px-4 py-3 text-left">Comment</th>
+                <th class="px-4 py-3 text-left">Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for comment in comments %}
+            <tr class="border-b border-[var(--border)]">
+                <td class="px-4 py-3 font-semibold">{{ comment.user.username }}</td>
+                <td class="px-4 py-3 truncate max-w-xs">{{ comment.content }}</td>
+                <td class="px-4 py-3 text-[var(--text-secondary)]">{{ comment.created_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-center py-8 text-[var(--text-secondary)]">No comments</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function showTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.getElementById('tab-' + tabName).classList.remove('hidden');
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('text-[var(--blue)]', 'border-[var(--blue)]');
+        btn.classList.add('text-[var(--text-secondary)]');
+        btn.style.borderBottom = 'none';
+    });
+    const active = document.querySelector(`[data-tab="${tabName}"]`);
+    active.classList.add('text-[var(--blue)]', 'border-[var(--blue)]');
+    active.classList.remove('text-[var(--text-secondary)]');
+    active.style.borderBottom = '2px solid var(--blue)';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    showTab('users');
+});
+</script>
+{% endblock %}

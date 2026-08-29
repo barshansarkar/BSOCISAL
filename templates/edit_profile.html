@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="post-card p-6">
+        <h2 class="text-2xl font-bold mb-6">Edit Profile</h2>
+        
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+            {{ form.hidden_tag() }}
+            
+            <div class="flex items-center space-x-6">
+                <img src="{{ url_for('static', filename='profile_pics/' + current_user.avatar) if current_user.avatar else 'https://via.placeholder.com/100' }}" 
+                     alt="Profile" class="w-24 h-24 rounded-full object-cover border-2 border-custom">
+                <div>
+                    {{ form.avatar(class="block text-sm text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600 cursor-pointer") }}
+                    {% for error in form.avatar.errors %}
+                        <span class="text-red-500 text-sm">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-2">Bio</label>
+                {{ form.bio(class="w-full bg-secondary text-primary rounded-xl px-4 py-3 border border-custom focus:border-blue-500 focus:outline-none transition", rows=4, placeholder="Tell us about yourself...") }}
+                <div class="text-right text-secondary text-sm mt-1">{{ form.bio.data|length if form.bio.data else 0 }}/160</div>
+                {% for error in form.bio.errors %}
+                    <span class="text-red-500 text-sm">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="flex items-center space-x-4">
+                {{ form.submit(class="gradient-btn px-6 py-2") }}
+                <a href="{{ url_for('profile', username=current_user.username) }}" class="text-secondary hover:text-primary transition">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const bioTextarea = document.querySelector('textarea[name="bio"]');
+if (bioTextarea) {
+    bioTextarea.addEventListener('input', function() {
+        const count = this.value.length;
+        this.parentElement.querySelector('.text-right').textContent = count + '/160';
+    });
+}
+</script>
+{% endblock %}

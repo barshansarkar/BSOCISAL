@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Header -->
+<div class="header-clean">
+    <h2>Home</h2>
+</div>
+
+<!-- Compose -->
+{% if current_user.is_authenticated %}
+<div class="compose-clean flex space-x-3">
+    <img src="{{ url_for('static', filename='profile_pics/' + current_user.avatar) if current_user.avatar else 'https://via.placeholder.com/48' }}" 
+         alt="Profile" class="avatar-clean-lg">
+    <div class="flex-1">
+        <form action="{{ url_for('create_post') }}" method="GET">
+            <textarea placeholder="What's happening?" rows="2" readonly></textarea>
+            <div class="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
+                <div class="flex items-center space-x-2">
+                    <button type="button" class="action-clean text-[var(--blue)]"><i class="fas fa-image"></i></button>
+                    <button type="button" class="action-clean text-[var(--blue)]"><i class="fas fa-gif"></i></button>
+                    <button type="button" class="action-clean text-[var(--blue)]"><i class="fas fa-poll"></i></button>
+                </div>
+                <button type="submit" class="btn-blue">Post</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Feed Filter Tabs -->
+<div class="flex border-b border-[var(--border)] bg-[var(--bg)] sticky top-[56px] z-10 backdrop-blur-sm">
+    <a href="{{ url_for('index', feed='all') }}" 
+       class="flex-1 text-center py-3 font-bold text-sm transition-all duration-200 
+              {% if feed_type == 'all' %}text-[var(--blue)] border-b-2 border-[var(--blue)]{% else %}text-[var(--text-secondary)] hover:text-[var(--text)]{% endif %}">
+        For You
+    </a>
+    <a href="{{ url_for('index', feed='following') }}" 
+       class="flex-1 text-center py-3 font-bold text-sm transition-all duration-200 
+              {% if feed_type == 'following' %}text-[var(--blue)] border-b-2 border-[var(--blue)]{% else %}text-[var(--text-secondary)] hover:text-[var(--text)]{% endif %}">
+        Following
+    </a>
+</div>
+
+<!-- Feed with suggestions after every 3 posts -->
+{% if posts %}
+    {% for post in posts %}
+        <!-- Individual post -->
+        <div class="post-clean">
+            <div class="flex space-x-3">
+                <a href="{{ url_for('profile', username=post.author.username) }}" class="flex-shrink-0">
+                    <img src="{{ url_for('static', filename='profile_pics/' + post.author.avatar) if post.author.avatar else 'https://via.placeholder.com/48' }}" 
+                         alt="{{ post.author.username }}" class="avatar-clean-lg">
+                </a>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center space-x-1 text-sm">
+                        <a href="{{ url_for('profile', username=post.author.username) }}" class="font-bold hover:underline">
+                            {{ post.author.username }}
+                        </a>
+                        {% if post.author.is_verified %}
+                        <i class="fas fa-check-circle text-[var(--blue)] text-xs"></i>
+                        {% endif %}
+                        <span class="text-[var(--text-secondary)]">@{{ post.author.username }}</span>
+                        <span class="text-[var(--text-secondary)]">·</span>
+                        <span class="text-[var(--text-secondary)]">{{ post.created_at.strftime('%b %d') }}</span>
+                    </div>
+                    
+                    <p class="whitespace-pre-wrap break-words mt-1">{{ post.content }}</p>
+                    
+                    {% if post.images %}
+                    <div class="grid-clean grid-clean-{{ post.images|length }}">
+                        {% for image in post.images|sort(attribute='order') %}
+                            <img src="{{ url_for('static', filename='uploads/' + image.filename) }}" 
+                                 alt="Post image" 
+                                 onclick="openImageModal(this.src)"
+                                 loading="lazy">
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="flex items-center justify-between mt-3 max-w-md">
+                        <button class="action-clean">
+                            <i class="far fa-comment"></i>
+                            <span>{{ post.comment_count() }}</span>
+                        </button>
+                        <button class="action-clean retweet">
+                            <i class="fas fa-retweet"></i>
+                            <span>0</span>
+                        </button>
+                        <button class="action-clean like like-btn" data-post-id="{{ post.id }}">
+                            <i class="{% if current_user.is_authenticated and post.likes|selectattr('user_id', 'equalto', current_user.id)|list %}fas text-[var(--pink)]{% else %}far{% endif %} fa-heart"></i>
+                            <span class="like-count">{{ post.like_count() }}</span>
+                        </button>
+                        <button class="action-clean">
+                            <i class="fas fa-share"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggestion block (sliding cards) after every 3rd post -->
+        {% if loop.index % 3 == 0 %}
+            {% set block_num = (loop.index // 3) - 1 %}
+            {% set start = block_num * 3 %}
+            {% set end = start + 3 %}
+            {% set suggestion_slice = suggested_users[start:end] %}
+            {% if suggestion_slice %}
+                <div class="post-clean border-b border-[var(--border)] bg-[var(--bg-secondary)]/40 py-2">
+                    <div class="px-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-bold text-sm text-[var(--text-secondary)] uppercase tracking-wider">
+                                Who to follow
+                            </h3>
+                            <span class="text-[var(--text-secondary)] text-xs flex items-center gap-1">
+                                <i class="fas fa-chevron-left text-[var(--text-secondary)]/50"></i>
+                                <i class="fas fa-chevron-right text-[var(--text-secondary)]/50"></i>
+                            </span>
+                        </div>
+                        <!-- Horizontal scrollable cards -->
+                        <div class="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 scrollbar-hide" 
+                             style="scrollbar-width: none; -ms-overflow-style: none;">
+                            {% for entry in suggestion_slice %}
+                                {% set user = entry.user %}
+                                {% set is_following = entry.is_following %}
+                                <div class="min-w-[160px] max-w-[180px] snap-start bg-[var(--bg)] border border-[var(--border)] rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200 flex-shrink-0">
+                                    <div class="flex flex-col items-center text-center">
+                                        <a href="{{ url_for('profile', username=user.username) }}">
+                                            <img src="{{ url_for('static', filename='profile_pics/' + user.avatar) if user.avatar else 'https://via.placeholder.com/64' }}" 
+                                                 class="avatar-clean w-16 h-16 mb-2 border-2 border-[var(--border)]" alt="{{ user.username }}">
+                                        </a>
+                                        <a href="{{ url_for('profile', username=user.username) }}" class="font-bold text-sm hover:underline truncate w-full">
+                                            {{ user.username }}
+                                        </a>
+                                        <p class="text-[var(--text-secondary)] text-xs truncate w-full">@{{ user.username }}</p>
+                                        {% if user.bio %}
+                                            <p class="text-[var(--text-secondary)] text-xs truncate w-full mt-1 line-clamp-2">{{ user.bio }}</p>
+                                        {% endif %}
+                                        <!-- Follow button with dynamic data -->
+                                        {% if current_user.is_authenticated and current_user.id != user.id %}
+                                            <button class="follow-btn btn-blue text-xs px-4 py-1 mt-2 transition-all duration-200 
+                                                           {% if is_following %}bg-[var(--bg-secondary)] text-[var(--text)] border border-[var(--border)] hover:bg-red-50 hover:text-red-600{% endif %}"
+                                                    data-user-id="{{ user.id }}"
+                                                    data-following="{{ 'true' if is_following else 'false' }}">
+                                                {{ 'Unfollow' if is_following else 'Follow' }}
+                                            </button>
+                                        {% elif current_user.id == user.id %}
+                                            <button class="btn-blue text-xs px-4 py-1 mt-2 opacity-50 cursor-not-allowed" disabled>
+                                                You
+                                            </button>
+                                        {% else %}
+                                            <button class="follow-btn btn-blue text-xs px-4 py-1 mt-2"
+                                                    data-user-id="{{ user.id }}"
+                                                    data-following="false">
+                                                Follow
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+{% else %}
+    <div class="p-12 text-center border-b border-[var(--border)]">
+        <i class="fas fa-inbox text-5xl text-[var(--text-secondary)] mb-4"></i>
+        <h3 class="text-2xl font-bold mb-2">No posts yet</h3>
+        <p class="text-[var(--text-secondary)]">Be the first to post!</p>
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('create_post') }}" class="btn-blue inline-block mt-4">Post something</a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="btn-blue inline-block mt-4">Login to post</a>
+        {% endif %}
+    </div>
+{% endif %}
+
+<!-- Image Modal -->
+<div id="imageModal" class="modal-clean hidden" onclick="closeImageModal()">
+    <div onclick="event.stopPropagation()" class="max-w-4xl max-h-screen p-4">
+        <img id="modalImage" src="" alt="" class="max-w-full max-h-screen rounded-lg">
+        <button onclick="closeImageModal()" class="absolute top-4 right-4 text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/70">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Extra style for scrollbar hiding and button transitions -->
+<style>
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .follow-btn {
+        min-width: 70px;
+    }
+    .follow-btn.unfollow {
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+    .follow-btn.unfollow:hover {
+        background: #fee2e2;
+        color: #dc2626;
+        border-color: #fecaca;
+    }
+</style>
+
+<script>
+function openImageModal(src) {
+    document.getElementById('modalImage').src = src;
+    document.getElementById('imageModal').classList.remove('hidden');
+}
+
+function closeImageModal() {
+    document.getElementById('imageModal').classList.add('hidden');
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeImageModal();
+});
+
+// Follow/Unfollow AJAX
+document.querySelectorAll('.follow-btn').forEach(btn => {
+    btn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        const userId = this.dataset.userId;
+        const isFollowing = this.dataset.following === 'true';
+
+        try {
+            const res = await fetch(`/follow/${userId}`, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await res.json();
+            if (data.following !== undefined) {
+                // Toggle button appearance
+                this.dataset.following = data.following ? 'true' : 'false';
+                this.textContent = data.following ? 'Unfollow' : 'Follow';
+                this.classList.toggle('unfollow', data.following);
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to follow/unfollow. Please try again.');
+        }
+    });
+});
+</script>
+{% endblock %}

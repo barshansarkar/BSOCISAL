@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <!-- Original Post -->
+    <div class="post-card p-6 mb-4">
+        <div class="flex items-start space-x-3">
+            <a href="{{ url_for('profile', username=post.author.username) }}" class="flex-shrink-0">
+                <img src="{{ url_for('static', filename='profile_pics/' + post.author.avatar) if post.author.avatar else 'https://via.placeholder.com/48' }}" 
+                     alt="{{ post.author.username }}" class="avatar-large">
+            </a>
+            <div class="flex-1">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <a href="{{ url_for('profile', username=post.author.username) }}" class="font-bold hover:underline">
+                            {{ post.author.username }}
+                        </a>
+                        <span class="text-secondary text-sm">@{{ post.author.username }}</span>
+                        <span class="text-secondary text-sm">·</span>
+                        <span class="text-secondary text-sm">{{ post.created_at.strftime('%b %d, %Y') }}</span>
+                    </div>
+                    {% if current_user.id == post.user_id %}
+                    <button onclick="confirmDelete({{ post.id }})" class="text-secondary hover:text-red-500 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <form id="delete-form-{{ post.id }}" action="{{ url_for('delete_post', post_id=post.id) }}" method="POST" class="hidden">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                    </form>
+                    {% endif %}
+                </div>
+                
+                
+                <p class="mt-2 text-primary text-lg whitespace-pre-wrap">{{ post.content }}</p>
+                
+                {% if post.images %}
+                <div class="image-grid image-grid-{{ post.images|length }} mt-3">
+                    {% for image in post.images|sort(attribute='order') %}
+                        <img src="{{ url_for('static', filename='uploads/' + image.filename) }}" 
+                             alt="Post image" 
+                             onclick="openImageModal(this.src)"
+                             loading="lazy">
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="flex items-center space-x-6 mt-4 pt-3 border-t border-custom">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-secondary text-sm">{{ post.like_count() }} likes</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-secondary text-sm">{{ post.comment_count() }} replies</span>
+                    </div>
+                    <span class="text-secondary text-sm">{{ post.created_at.strftime('%I:%M %p') }}</span>
+                </div>
+                
+                <div class="flex items-center justify-between mt-3 pt-3 border-t border-custom">
+                    <button class="flex items-center space-x-2 text-secondary hover:text-blue-500 transition group">
+                        <i class="far fa-comment"></i>
+                        <span class="text-sm">{{ post.comment_count() }}</span>
+                    </button>
+                    
+                    <button class="like-btn flex items-center space-x-2 text-secondary hover:text-green-500 transition" 
+                            data-post-id="{{ post.id }}">
+                        <i class="{% if current_user.is_authenticated and post.likes|selectattr('user_id', 'equalto', current_user.id)|list %}fas text-red-500{% else %}far{% endif %} fa-heart"></i>
+                        <span class="like-count text-sm">{{ post.like_count() }}</span>
+                    </button>
+                    
+                    <button class="flex items-center space-x-2 text-secondary hover:text-blue-500 transition">
+                        <i class="fas fa-retweet"></i>
+                    </button>
+                    
+                    <button class="flex items-center space-x-2 text-secondary hover:text-blue-500 transition">
+                        <i class="fas fa-share"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comment Section -->
+    <div class="post-card p-6">
+        <h3 class="font-bold text-lg mb-4">
+            <i class="far fa-comment mr-2"></i> Replies
+        </h3>
+        
+        <!-- Comment Form -->
+        {% if current_user.is_authenticated %}
+        <form method="POST" class="mb-6">
+            {{ form.hidden_tag() }}
+            <div class="flex items-start space-x-3">
+                <img src="{{ url_for('static', filename='profile_pics/' + current_user.avatar) if current_user.avatar else 'https://via.placeholder.com/40' }}" 
+                     alt="Profile" class="avatar">
+                <div class="flex-1">
+                    {{ form.content(class="w-full bg-secondary text-primary rounded-xl px-4 py-2 border border-custom focus:border-blue-500 focus:outline-none transition resize-none", rows=3, placeholder="Post your reply...") }}
+                    <div class="flex justify-end mt-2">
+                        {{ form.submit(class="gradient-btn px-4 py-1 text-sm") }}
+                    </div>
+                </div>
+            </div>
+        </form>
+        {% else %}
+        <div class="text-center py-4 bg-secondary rounded-xl">
+            <p class="text-secondary">Login to reply to this post</p>
+            <a href="{{ url_for('login') }}" class="gradient-btn inline-block mt-2 text-sm px-4 py-1">Login</a>
+        </div>
+        {% endif %}
+
+        <!-- Comments List -->
+        <div class="space-y-4">
+            {% for comment in post.comments %}
+            <div class="flex items-start space-x-3 pt-3 border-t border-custom">
+                <img src="{{ url_for('static', filename='profile_pics/' + comment.user.avatar) if comment.user.avatar else 'https://via.placeholder.com/40' }}" 
+                     alt="{{ comment.user.username }}" class="avatar">
+                <div class="flex-1">
+                    <div class="flex items-center space-x-2">
+                        <a href="{{ url_for('profile', username=comment.user.username) }}" class="font-bold hover:underline">
+                            {{ comment.user.username }}
+                        </a>
+                        <span class="text-secondary text-sm">@{{ comment.user.username }}</span>
+                        <span class="text-secondary text-sm">·</span>
+                        <span class="text-secondary text-sm">{{ comment.created_at.strftime('%b %d') }}</span>
+                    </div>
+                    <p class="mt-1">{{ comment.content }}</p>
+                    <div class="flex items-center space-x-4 mt-1">
+                        <button class="text-secondary text-sm hover:text-blue-500 transition">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <button class="text-secondary text-sm hover:text-blue-500 transition">Reply</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% if not post.comments %}
+            <div class="text-center py-6 text-secondary">
+                <i class="far fa-comment-dots text-3xl mb-2"></i>
+                <p>No replies yet. Be the first to comment!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div id="imageModal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-center justify-center" onclick="closeImageModal()">
+    <div class="max-w-4xl max-h-screen p-4" onclick="event.stopPropagation()">
+        <img id="modalImage" src="" alt="Full size image" class="max-w-full max-h-screen rounded-lg">
+        <button onclick="closeImageModal()" class="absolute top-4 right-4 text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/70">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+function openImageModal(src) {
+    document.getElementById('modalImage').src = src;
+    document.getElementById('imageModal').classList.remove('hidden');
+}
+
+function closeImageModal() {
+    document.getElementById('imageModal').classList.add('hidden');
+}
+
+function confirmDelete(postId) {
+    if (confirm('Are you sure you want to delete this post?')) {
+        document.getElementById('delete-form-' + postId).submit();
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeImageModal();
+});
+</script>
+{% endblock %}

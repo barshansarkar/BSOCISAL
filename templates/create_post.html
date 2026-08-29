@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header-clean">
+    <h2>New Post</h2>
+</div>
+
+<div class="p-4">
+    <form method="POST" enctype="multipart/form-data" class="space-y-4">
+        {{ form.hidden_tag() }}
+        
+        <div class="flex space-x-3">
+            <img src="{{ url_for('static', filename='profile_pics/' + current_user.avatar) if current_user.avatar else 'https://via.placeholder.com/48' }}" 
+                 alt="Profile" class="avatar-clean-lg">
+            <div class="flex-1">
+                <div class="font-bold">{{ current_user.username }}</div>
+                {{ form.content(class="w-full bg-transparent border-none resize-none focus:outline-none text-lg", rows=6, placeholder="What's happening?") }}
+                <div class="text-right text-[var(--text-secondary)] text-sm mt-1">
+                    <span id="charCount">0</span>/1000
+                </div>
+            </div>
+        </div>
+
+        <div class="border-t border-[var(--border)] pt-4">
+            <div id="drop-zone" class="border-2 border-dashed border-[var(--border)] rounded-xl p-6 text-center cursor-pointer hover:border-[var(--blue)] transition">
+                <i class="fas fa-cloud-upload-alt text-3xl text-[var(--text-secondary)] mb-2"></i>
+                <p class="text-[var(--text-secondary)]">Drop images here or click to upload</p>
+                <p class="text-[var(--text-secondary)] text-sm">Max 4 images</p>
+                {{ form.images(class="hidden", id="file-input", multiple=true, accept="image/*") }}
+            </div>
+            <div id="image-preview" class="grid grid-cols-4 gap-2 mt-3"></div>
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-[var(--border)]">
+            <div class="flex space-x-2">
+                <label for="file-input" class="action-clean text-[var(--blue)] cursor-pointer">
+                    <i class="fas fa-image"></i>
+                </label>
+                <button type="button" class="action-clean text-[var(--blue)]"><i class="fas fa-gif"></i></button>
+            </div>
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('index') }}" class="text-[var(--text-secondary)] hover:text-[var(--text)]">Cancel</a>
+                {{ form.submit(class="btn-blue") }}
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+const textarea = document.querySelector('textarea');
+if (textarea) {
+    textarea.addEventListener('input', function() {
+        document.getElementById('charCount').textContent = this.value.length;
+    });
+}
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const preview = document.getElementById('image-preview');
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('border-[var(--blue)]', 'bg-[var(--bg-secondary)]');
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('border-[var(--blue)]', 'bg-[var(--bg-secondary)]');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('border-[var(--blue)]', 'bg-[var(--bg-secondary)]');
+    fileInput.files = e.dataTransfer.files;
+    previewImages(fileInput.files);
+});
+
+fileInput.addEventListener('change', function() {
+    previewImages(this.files);
+});
+
+function previewImages(files) {
+    preview.innerHTML = '';
+    for (let i = 0; i < Math.min(files.length, 4); i++) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const div = document.createElement('div');
+            div.className = 'relative';
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'w-full h-32 object-cover rounded-lg border border-[var(--border)]';
+            div.appendChild(img);
+            const btn = document.createElement('button');
+            btn.className = 'absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-black/70';
+            btn.innerHTML = '×';
+            btn.onclick = function() { div.remove(); };
+            div.appendChild(btn);
+            preview.appendChild(div);
+        };
+        reader.readAsDataURL(files[i]);
+    }
+}
+</script>
+{% endblock %}
